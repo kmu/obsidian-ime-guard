@@ -109,4 +109,39 @@ describe("StaleTracker", () => {
     t.end();
     expect(t.pending()).toBeNull();
   });
+
+  it("finds a confirmed text put after the composition instead of in its place (the second iPad log)", () => {
+    // "…よりはh" ends at 4 here; the composition "はるかに" covers 4-8
+    const text = "よりはhはるかに";
+    const t = new StaleTracker();
+    t.start();
+    t.update("はるかに");
+    t.beforeInput(4, 8, doc(text));
+    t.deleteText(4, 8);
+    // the confirmed text goes in at 8, after the composition, which was never removed
+    t.confirm(8, "はるかに", doc(text));
+    t.end();
+    expect(t.pending()).toEqual({ from: 4, to: 8, text: "はるかに", repeat: true });
+  });
+
+  it("finds nothing when the confirmed text goes where the composition was, as usual", () => {
+    const t = new StaleTracker();
+    t.start();
+    t.update("正当化");
+    t.beforeInput(4, 7, doc("abcd正当化"));
+    t.deleteText(4, 7);
+    t.confirm(4, "正当化", doc("abcd正当化"));
+    t.end();
+    expect(t.pending()).toBeNull();
+  });
+
+  it("finds nothing when the confirmed text differs from the composition left in place", () => {
+    const t = new StaleTracker();
+    t.start();
+    t.update("さr");
+    t.deleteText(4, 6);
+    t.confirm(6, "さr", doc("abcdされ"));
+    t.end();
+    expect(t.pending()).toBeNull();
+  });
 });

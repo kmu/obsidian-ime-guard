@@ -2,6 +2,8 @@ export interface Leftover {
   from: number;
   to: number;
   text: string;
+  /** The same text follows right after, so removing this leaves one copy. */
+  repeat?: boolean;
 }
 
 /**
@@ -16,12 +18,14 @@ export class StaleTracker {
   private shown = new Set<string>();
   private latest = "";
   private found: Leftover | null = null;
+  private deleted: { from: number; to: number } | null = null;
 
   start() {
     this.composing = true;
     this.start_ = null;
     this.shown.clear();
     this.latest = "";
+    this.deleted = null;
   }
 
   /** The composition text, from each compositionupdate. */
@@ -46,6 +50,23 @@ export class StaleTracker {
     this.start_ = from;
   }
 
+  /** The target range of a deleteCompositionText beforeinput, sent just before the confirmed text. */
+  deleteText(from: number, to: number) {
+    if (this.composing) this.deleted = { from, to };
+  }
+
+  /**
+   * The start of an insertFromComposition beforeinput. Normally the confirmed text goes where
+   * the composition was. When it goes after it instead, the composition was never removed and
+   * the text ends up twice.
+   */
+  confirm(from: number, data: string, textAt: (from: number, to: number) => string) {
+    const d = this.deleted;
+    this.deleted = null;
+    if (!this.composing || !d || this.found || d.from >= d.to || from !== d.to) return;
+    if (data && textAt(d.from, d.to) === data) this.found = { from: d.from, to: d.to, text: data, repeat: true };
+  }
+
   end() {
     this.composing = false;
   }
@@ -62,6 +83,7 @@ export class StaleTracker {
     const to = mapPos(this.found.to, -1);
     this.found = to - from === this.found.to - this.found.from ? { ...this.found, from, to } : null;
     if (this.start_ !== null) this.start_ = mapPos(this.start_, 1);
+    this.deleted = null;
   }
 
   clear() {

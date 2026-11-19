@@ -6,7 +6,7 @@ import { show, type LogBuffer } from "./log";
 /** Wait this long after a composition ends, so a composition that follows at once can begin. */
 const SETTLE_MS = 150;
 
-/** Removes the leftover the iOS duplication leaves in front of a composition, once typing settles. */
+/** Removes the text the iOS duplication leaves in front of a composition, once typing settles. */
 class Guard {
   private readonly tracker = new StaleTracker();
   private readonly listeners: [string, (e: Event) => void][];
@@ -20,12 +20,15 @@ class Guard {
       ["beforeinput", (e) => {
         const input = e as InputEvent;
         const range = input.getTargetRanges()[0];
-        if (input.inputType !== "insertCompositionText" || !range) return;
+        if (!range) return;
         const from = this.pos(range.startContainer, range.startOffset);
         const to = this.pos(range.endContainer, range.endOffset);
         if (from === null || to === null) return;
         const before = this.tracker.pending();
-        this.tracker.beforeInput(from, to, textAt);
+        if (input.inputType === "insertCompositionText") this.tracker.beforeInput(from, to, textAt);
+        else if (input.inputType === "deleteCompositionText") this.tracker.deleteText(from, to);
+        else if (input.inputType === "insertFromComposition") this.tracker.confirm(from, input.data ?? "", textAt);
+        else return;
         const found = this.tracker.pending();
         if (found && found !== before) log.add(performance.now(), "guard", `leftover ${found.from}-${found.to} ${show(found.text)}`);
       }],
@@ -55,7 +58,10 @@ class Guard {
     // still composing: the compositionend of that one tries again
     if (!leftover || this.view.composing) return;
     this.tracker.clear();
-    if (this.view.state.doc.sliceString(leftover.from, leftover.to) !== leftover.text) {
+    const doc = this.view.state.doc;
+    const after = leftover.to + leftover.text.length;
+    const twice = after <= doc.length && doc.sliceString(leftover.to, after) === leftover.text;
+    if (doc.sliceString(leftover.from, leftover.to) !== leftover.text || (leftover.repeat && !twice)) {
       this.log.add(performance.now(), "guard", `skipped, text at ${leftover.from}-${leftover.to} changed`);
       return;
     }
