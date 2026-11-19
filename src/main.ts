@@ -1,4 +1,5 @@
 import { Notice, Platform, Plugin, apiVersion, normalizePath } from "obsidian";
+import { guardExtension } from "./guardEditor";
 import { formatLog, LogBuffer, stamp } from "./log";
 import { recorderExtension } from "./recorder";
 import { t } from "./t";
@@ -10,7 +11,7 @@ export default class ImeGuardPlugin extends Plugin {
   private readonly log = new LogBuffer(LOG_SIZE);
 
   onload() {
-    this.registerEditorExtension(recorderExtension(this.log));
+    this.registerEditorExtension([recorderExtension(this.log), guardExtension(this.log)]);
     this.addCommand({ id: "save-log", name: t("command.save"), callback: () => void this.saveLog() });
     this.addCommand({
       id: "clear-log",

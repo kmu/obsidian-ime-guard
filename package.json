@@ -1,6 +1,6 @@
 {
   "name": "obsidian-ime-guard",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "Record and work around Japanese input problems in the Obsidian editor on iOS",
   "main": "main.js",
   "scripts": {
