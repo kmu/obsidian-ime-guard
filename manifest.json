@@ -1,0 +1,10 @@
+{
+  "id": "ime-guard",
+  "name": "IME Guard",
+  "version": "0.0.1",
+  "minAppVersion": "1.10.0",
+  "description": "Record and work around Japanese input problems in the editor on iOS.",
+  "author": "kmu",
+  "authorUrl": "https://github.com/kmu",
+  "isDesktopOnly": false
+}
